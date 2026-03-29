@@ -1,129 +1,145 @@
-// Define ultrasonic sensor pins
-const int trigFront = 2;
-const int echoFront = 3;
-const int trigBack = 4;
-const int echoBack = 5;
-const int trigLeft = 6;
-const int echoLeft = 7;
-const int trigRight = 8;
-const int echoRight = 9;
+/* * Robot Obstacle Avoidance System
+ * Language: Arduino C / C++
+ */
 
-// Define motor pins
-const int enLeft = 10;
-const int in1Left = 11;
-const int in2Left = 12;
-const int enRight = 13;
-const int in1Right = A0;
-const int in2Right = A1;
+// --- Pin Definitions ---
+#define TRIG_FRONT 2
+#define ECHO_FRONT 3
+#define TRIG_BACK  4
+#define ECHO_BACK  5
+#define TRIG_LEFT  6
+#define ECHO_LEFT  7
+#define TRIG_RIGHT 8
+#define ECHO_RIGHT 9
+
+#define EN_LEFT    10
+#define IN1_LEFT   11
+#define IN2_LEFT   12
+#define EN_RIGHT   13
+#define IN1_RIGHT  A0
+#define IN2_RIGHT  A1
+
+// --- Function Prototypes ---
+long measureDistance(int trigPin, int echoPin);
+void moveForward();
+void moveBackward();
+void turnLeft();
+void turnRight();
+void stopMotors();
 
 void setup() {
-  // Motor pins as outputs
-  pinMode(in1Left, OUTPUT);
-  pinMode(in2Left, OUTPUT);
-  pinMode(enLeft, OUTPUT);
-  pinMode(in1Right, OUTPUT);
-  pinMode(in2Right, OUTPUT);
-  pinMode(enRight, OUTPUT);
+    // Initialize Motor Pins
+    pinMode(IN1_LEFT, OUTPUT);
+    pinMode(IN2_LEFT, OUTPUT);
+    pinMode(EN_LEFT, OUTPUT);
+    pinMode(IN1_RIGHT, OUTPUT);
+    pinMode(IN2_RIGHT, OUTPUT);
+    pinMode(EN_RIGHT, OUTPUT);
 
-  // Ultrasonic sensor pins
-  pinMode(trigFront, OUTPUT);
-  pinMode(echoFront, INPUT);
-  pinMode(trigBack, OUTPUT);
-  pinMode(echoBack, INPUT);
-  pinMode(trigLeft, OUTPUT);
-  pinMode(echoLeft, INPUT);
-  pinMode(trigRight, OUTPUT);
-  pinMode(echoRight, INPUT);
+    // Initialize Sensor Pins
+    pinMode(TRIG_FRONT, OUTPUT);
+    pinMode(ECHO_FRONT, INPUT);
+    pinMode(TRIG_BACK, OUTPUT);
+    pinMode(ECHO_BACK, INPUT);
+    pinMode(TRIG_LEFT, OUTPUT);
+    pinMode(ECHO_LEFT, INPUT);
+    pinMode(TRIG_RIGHT, OUTPUT);
+    pinMode(ECHO_RIGHT, INPUT);
 
-  // Start serial for debugging
-  Serial.begin(9600);
-}
-
-// Function to measure distance
-long measureDistance(int trigPin, int echoPin) {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  long duration = pulseIn(echoPin, HIGH);
-  return duration * 0.034 / 2; // Convert time to distance in cm
-}
-
-// Function to move motors
-void moveForward() {
-  digitalWrite(in1Left, HIGH);
-  digitalWrite(in2Left, LOW);
-  digitalWrite(in1Right, HIGH);
-  digitalWrite(in2Right, LOW);
-  analogWrite(enLeft, 255);  // Full speed
-  analogWrite(enRight, 255); // Full speed
-}
-
-void moveBackward() {
-  digitalWrite(in1Left, LOW);
-  digitalWrite(in2Left, HIGH);
-  digitalWrite(in1Right, LOW);
-  digitalWrite(in2Right, HIGH);
-  analogWrite(enLeft, 255);
-  analogWrite(enRight, 255);
-}
-
-void turnLeft() {
-  digitalWrite(in1Left, LOW);
-  digitalWrite(in2Left, HIGH);
-  digitalWrite(in1Right, HIGH);
-  digitalWrite(in2Right, LOW);
-  analogWrite(enLeft, 255);
-  analogWrite(enRight, 255);
-}
-
-void turnRight() {
-  digitalWrite(in1Left, HIGH);
-  digitalWrite(in2Left, LOW);
-  digitalWrite(in1Right, LOW);
-  digitalWrite(in2Right, HIGH);
-  analogWrite(enLeft, 255);
-  analogWrite(enRight, 255);
-}
-
-void stopMotors() {
-  digitalWrite(in1Left, LOW);
-  digitalWrite(in2Left, LOW);
-  digitalWrite(in1Right, LOW);
-  digitalWrite(in2Right, LOW);
+    Serial.begin(9600);
 }
 
 void loop() {
-  // Measure distances from all sensors
-  long distFront = measureDistance(trigFront, echoFront);
-  long distBack = measureDistance(trigBack, echoBack);
-  long distLeft = measureDistance(trigLeft, echoLeft);
-  long distRight = measureDistance(trigRight, echoRight);
+    // 1. Sense Environment
+    long distFront = measureDistance(TRIG_FRONT, ECHO_FRONT);
+    long distLeft  = measureDistance(TRIG_LEFT, ECHO_LEFT);
+    long distRight = measureDistance(TRIG_RIGHT, ECHO_RIGHT);
+    long distBack  = measureDistance(TRIG_BACK, ECHO_BACK);
 
-  // Debugging output
-  Serial.print("Front: "); Serial.println(distFront);
-  Serial.print("Back: "); Serial.println(distBack);
-  Serial.print("Left: "); Serial.println(distLeft);
-  Serial.print("Right: "); Serial.println(distRight);
-
-  // Logic for object avoidance
-  if (distFront > 10) {
-    moveForward();  // Move forward if front distance > 30 cm
-  } else if (distRight > 20) {
-      turnRight();  // Turn right if space on the right
-      delay(500);
-    } else if (distLeft > 20) {
-      turnLeft();   // Turn left if space on the left
-      delay(500);
-    } else {
-      // If no space on either side, move backward
-      while (distBack > 20) {
+    // 2. Decision Logic
+    if (distFront > 15) {
+        // Path is clear
+        moveForward();
+    } 
+    else if (distRight > 25) {
+        // Obstacle ahead, but right is clear
+        turnRight();
+        delay(300); 
+    } 
+    else if (distLeft > 25) {
+        // Obstacle ahead/right, but left is clear
+        turnLeft();
+        delay(300);
+    } 
+    else if (distBack > 15) {
+        // Boxed in - move back slowly
         moveBackward();
-        distBack = measureDistance(trigBack, echoBack);  // Keep checking back sensor
-      }
+        delay(500);
+    } 
+    else {
+        // Completely stuck
+        stopMotors();
     }
-  }
+    
+    delay(50); // Small stability delay
+}
+
+// --- Function Definitions ---
+
+long measureDistance(int trigPin, int echoPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+    
+    long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout added
+    // Formula: Distance = (Time x Speed of Sound) / 2
+    return duration * 0.034 / 2;
+}
+
+void moveForward() {
+    digitalWrite(IN1_LEFT, HIGH);
+    digitalWrite(IN2_LEFT, LOW);
+    digitalWrite(IN1_RIGHT, HIGH);
+    digitalWrite(IN2_RIGHT, LOW);
+    analogWrite(EN_LEFT, 200);  
+    analogWrite(EN_RIGHT, 200); 
+}
+
+void moveBackward() {
+    digitalWrite(IN1_LEFT, LOW);
+    digitalWrite(IN2_LEFT, HIGH);
+    digitalWrite(IN1_RIGHT, LOW);
+    digitalWrite(IN2_RIGHT, HIGH);
+    analogWrite(EN_LEFT, 180);
+    analogWrite(EN_RIGHT, 180);
+}
+
+void turnLeft() {
+    digitalWrite(IN1_LEFT, LOW);
+    digitalWrite(IN2_LEFT, HIGH);
+    digitalWrite(IN1_RIGHT, HIGH);
+    digitalWrite(IN2_RIGHT, LOW);
+    analogWrite(EN_LEFT, 200);
+    analogWrite(EN_RIGHT, 200);
+}
+
+void turnRight() {
+    digitalWrite(IN1_LEFT, HIGH);
+    digitalWrite(IN2_LEFT, LOW);
+    digitalWrite(IN1_RIGHT, LOW);
+    digitalWrite(IN2_RIGHT, HIGH);
+    analogWrite(EN_LEFT, 200);
+    analogWrite(EN_RIGHT, 200);
+}
+
+void stopMotors() {
+    digitalWrite(IN1_LEFT, LOW);
+    digitalWrite(IN2_LEFT, LOW);
+    digitalWrite(IN1_RIGHT, LOW);
+    digitalWrite(IN2_RIGHT, LOW);
+}
 
  
 
