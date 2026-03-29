@@ -1,5 +1,5 @@
 /* * Robot Obstacle Avoidance System
- * Language: Arduino C / C++
+ * Language: Arduino C 
  */
 
 // --- Pin Definitions ---
